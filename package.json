@@ -1,8 +1,10 @@
 {
   "name": "telegram-min-webhook",
   "version": "1.0.0",
-  "private": true,
+  "private": false,
   "type": "module",
+  "author": "Chenmo",
+  "license": "MIT",
   "scripts": {
     "start": "node index.js"
   },

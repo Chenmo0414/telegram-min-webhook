@@ -117,3 +117,12 @@ curl "https://api.telegram.org/bot<BOT_TOKEN>/getWebhookInfo"
 ```
 
 ---
+
+## Author / 作者
+- **Chenmo**
+
+## License / 开源协议
+- **MIT License**
+- See [LICENSE](./LICENSE)
+
+---
