@@ -1,52 +1,86 @@
-﻿# telegram-min-webhook
+# telegram-min-webhook
 
-最小可用 Telegram Webhook 项目，支持两种运行方式：
+生产可用 Telegram Webhook 中转服务（Node.js + Express），支持：
 
-1. **Cloudflare Worker（推荐）**
-2. **Node.js + Express（本地/传统服务器）**
-
-GitHub: https://github.com/Chenmo0414/telegram-min-webhook
-
----
-
-## 目录
-
-- `worker.js`：Cloudflare Worker 版本（可直接 CF 拉取）
-- `wrangler.toml`：Worker 配置
-- `index.js`：Node.js + Express 版本
-- `.env.example`：本地环境变量示例
+- Telegram Webhook 验签（`secret_token`）
+- 快速 `200 ACK` + 异步处理
+- 转发到 OpenClaw hooks（推荐）
+- 可选回声兜底
+- 去重（`update_id`）与基础安全控制
 
 ---
 
-## A. Cloudflare Worker 部署（推荐）
+## 推荐架构（国内云服务器）
 
-### 1) 前置
-- Cloudflare 账号
-- 域名已在 Cloudflare 托管（如 `chenmo.space`）
-- Node.js 18+
+`Telegram -> Cloudflare -> Nginx(443) -> telegram-min-webhook(127.0.0.1:13000) -> OpenClaw hooks`
 
-### 2) 安装与登录
+- Cloudflare 负责公网接入和 TLS 边缘能力
+- Nginx 负责反向代理与路径收敛
+- Node 服务只监听本地环回地址
+- OpenClaw 专注业务处理
+
+---
+
+## 环境变量
+
+参考 `.env.example`：
+
+- `BOT_TOKEN`：Telegram Bot Token
+- `WEBHOOK_SECRET`：与 `setWebhook secret_token` 一致
+- `PORT`：本地监听端口（例如 13000）
+- `PRIVATE_ONLY`：是否仅处理私聊
+- `OPENCLAW_HOOKS_URL`：OpenClaw `/hooks/agent` 地址
+- `OPENCLAW_HOOKS_TOKEN`：OpenClaw hooks token
+- `FORWARD_ONLY=true`：转发成功后不走回声
+- `ALLOW_IPS`：可选，来源 IP 白名单（逗号分隔）
+
+---
+
+## 本地启动
+
 ```bash
 pnpm install
-npx wrangler login
+cp .env.example .env
+pnpm start
 ```
 
-### 3) 设置 Secrets
+健康检查：
+
 ```bash
-npx wrangler secret put BOT_TOKEN
-npx wrangler secret put WEBHOOK_SECRET
+curl http://127.0.0.1:13000/health
 ```
 
-### 4) 部署
+---
+
+## Nginx 反代部署（Linux）
+
+1. 复制配置：`deploy/nginx.tg-webhook.conf` 到 `/etc/nginx/conf.d/`
+2. 按实际证书路径改 `ssl_certificate` / `ssl_certificate_key`
+3. 检查并重载：
+
 ```bash
-pnpm deploy
+nginx -t && systemctl reload nginx
 ```
 
-部署成功后得到 Worker 域名，或绑定自定义路由（例如）：
+---
 
-- `tg.chenmo.space/telegram/webhook*`
+## systemd 守护
 
-### 5) 设置 Telegram Webhook
+1. 复制 `deploy/telegram-min-webhook.service` 到 `/etc/systemd/system/`
+2. 项目放在 `/opt/telegram-min-webhook`
+3. 启动：
+
+```bash
+systemctl daemon-reload
+systemctl enable telegram-min-webhook
+systemctl restart telegram-min-webhook
+systemctl status telegram-min-webhook
+```
+
+---
+
+## 设置 Telegram Webhook
+
 ```bash
 curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
   -d "url=https://tg.chenmo.space/telegram/webhook" \
@@ -54,67 +88,37 @@ curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
   -d 'allowed_updates=["message","edited_message"]'
 ```
 
-### 6) 检查状态
+验证：
+
 ```bash
 curl "https://api.telegram.org/bot<BOT_TOKEN>/getWebhookInfo"
 ```
 
----
-
-## B. Node.js + Express 本地运行
-
-```bash
-pnpm install
-copy .env.example .env
-pnpm start
-```
-
-默认端点：
-- `POST /telegram/webhook`
-- `GET /health`
+期望：
+- `url` 为你的域名
+- `last_error_message` 为空
+- `pending_update_count` 不持续增长
 
 ---
 
-## 环境变量
+## OpenClaw hooks 最小配置示例
 
-### Worker
-- `BOT_TOKEN`（secret）
-- `WEBHOOK_SECRET`（secret）
-- `PRIVATE_ONLY`（vars，默认 `true`）
-
-### Node.js
-```env
-BOT_TOKEN=123456789:AAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-WEBHOOK_SECRET=replace_with_a_random_32_to_64_chars_secret
-PORT=3000
-PRIVATE_ONLY=true
+```json
+{
+  "hooks": {
+    "enabled": true,
+    "token": "replace_with_token",
+    "path": "/hooks"
+  }
+}
 ```
 
----
+Worker/中转服务转发目标填：
 
-## 脚本
-
-```bash
-pnpm start   # Node.js 版本
-pnpm dev     # Wrangler 本地调试
-pnpm deploy  # 部署 Cloudflare Worker
-```
+`https://<your-openclaw-host>/hooks/agent`
 
 ---
 
 ## License
+
 MIT
-
-## Worker 转发到 OpenClaw（可选）
-
-如果你不希望 Worker 直接回声，而是把消息交给 OpenClaw 处理：
-
-新增 Worker Variables/Secrets：
-
-- `OPENCLAW_INGRESS_URL`：OpenClaw 可访问的 HTTP 入站地址（例如 hooks endpoint）
-- `OPENCLAW_INGRESS_TOKEN`：对应 Bearer token（可选，但建议）
-- `FORWARD_ONLY=true`：转发成功后不再回声（默认 true）
-
-说明：
-- 未配置 `OPENCLAW_INGRESS_URL` 时，Worker 继续使用回声逻辑。
-- 配置后会先转发；若转发失败，会回落到回声（便于排障）。

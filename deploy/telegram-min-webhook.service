@@ -1,0 +1,24 @@
+[Unit]
+Description=telegram-min-webhook service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/telegram-min-webhook
+Environment=NODE_ENV=production
+EnvironmentFile=/opt/telegram-min-webhook/.env
+ExecStart=/usr/bin/node /opt/telegram-min-webhook/index.js
+Restart=always
+RestartSec=3
+User=www-data
+Group=www-data
+
+# Hardening (optional)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/telegram-min-webhook
+
+[Install]
+WantedBy=multi-user.target
