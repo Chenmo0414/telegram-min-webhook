@@ -28,14 +28,13 @@ async function processUpdate(update, env) {
   const privateOnly = String(env.PRIVATE_ONLY ?? 'true').toLowerCase() === 'true';
   if (privateOnly && msg.chat.type !== 'private') return;
 
-  // 1) Forward to OpenClaw ingress (if configured)
   if (env.OPENCLAW_INGRESS_URL) {
-    const ok = await forwardToOpenClaw(update, env);
+    const ok = await forwardToOpenClaw(msg, env);
     const forwardOnly = String(env.FORWARD_ONLY ?? 'true').toLowerCase() === 'true';
     if (ok && forwardOnly) return;
   }
 
-  // 2) Fallback echo behavior (or primary behavior when ingress not configured)
+  // fallback echo
   const api = `https://api.telegram.org/bot${env.BOT_TOKEN}/sendMessage`;
   const body = {
     chat_id: msg.chat.id,
@@ -54,20 +53,26 @@ async function processUpdate(update, env) {
   }
 }
 
-async function forwardToOpenClaw(update, env) {
+async function forwardToOpenClaw(msg, env) {
   try {
     const headers = { 'content-type': 'application/json' };
     if (env.OPENCLAW_INGRESS_TOKEN) {
       headers.authorization = `Bearer ${env.OPENCLAW_INGRESS_TOKEN}`;
     }
 
+    const payload = {
+      message: String(msg.text || '').trim(),
+      name: 'telegram-webhook-worker',
+      deliver: true,
+      channel: 'telegram',
+      to: String(msg.chat.id),
+      wakeMode: 'now',
+    };
+
     const r = await fetch(env.OPENCLAW_INGRESS_URL, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        source: 'telegram-webhook-worker',
-        update,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!r.ok) {
