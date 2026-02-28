@@ -104,3 +104,17 @@ pnpm deploy  # 部署 Cloudflare Worker
 
 ## License
 MIT
+
+## Worker 转发到 OpenClaw（可选）
+
+如果你不希望 Worker 直接回声，而是把消息交给 OpenClaw 处理：
+
+新增 Worker Variables/Secrets：
+
+- `OPENCLAW_INGRESS_URL`：OpenClaw 可访问的 HTTP 入站地址（例如 hooks endpoint）
+- `OPENCLAW_INGRESS_TOKEN`：对应 Bearer token（可选，但建议）
+- `FORWARD_ONLY=true`：转发成功后不再回声（默认 true）
+
+说明：
+- 未配置 `OPENCLAW_INGRESS_URL` 时，Worker 继续使用回声逻辑。
+- 配置后会先转发；若转发失败，会回落到回声（便于排障）。
