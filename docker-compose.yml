@@ -1,0 +1,15 @@
+﻿services:
+  telegram-min-webhook:
+    image: ghcr.io/chenmo0414/telegram-min-webhook:latest
+    container_name: telegram-min-webhook
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:13000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

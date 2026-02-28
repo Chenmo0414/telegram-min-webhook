@@ -1,0 +1,17 @@
+﻿FROM node:20-alpine AS base
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY index.js ./
+COPY .env.example ./
+
+ENV NODE_ENV=production
+ENV PORT=3000
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:${PORT}/health || exit 1
+
+CMD ["node", "index.js"]
