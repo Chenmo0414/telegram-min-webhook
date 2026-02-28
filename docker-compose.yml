@@ -1,4 +1,4 @@
-﻿services:
+services:
   telegram-min-webhook:
     image: ghcr.io/chenmo0414/telegram-min-webhook:latest
     container_name: telegram-min-webhook
