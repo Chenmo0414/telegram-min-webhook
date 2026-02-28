@@ -1,0 +1,10 @@
+﻿name = "telegram-min-webhook"
+main = "worker.js"
+compatibility_date = "2026-02-28"
+
+[vars]
+PRIVATE_ONLY = "true"
+
+# 部署后在 Cloudflare Dashboard / wrangler secret 中设置：
+# BOT_TOKEN
+# WEBHOOK_SECRET

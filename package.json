@@ -1,15 +1,20 @@
-{
-  "name": "telegram-min-webhook",
-  "version": "1.0.0",
-  "private": false,
-  "type": "module",
-  "author": "Chenmo",
-  "license": "MIT",
-  "scripts": {
-    "start": "node index.js"
-  },
-  "dependencies": {
-    "dotenv": "^16.6.1",
-    "express": "^4.21.2"
-  }
+﻿{
+    "name":  "telegram-min-webhook",
+    "version":  "1.0.0",
+    "private":  false,
+    "type":  "module",
+    "author":  "Chenmo",
+    "license":  "MIT",
+    "scripts":  {
+                    "start":  "node index.js",
+                    "dev":  "wrangler dev",
+                    "deploy":  "wrangler deploy"
+                },
+    "dependencies":  {
+                         "dotenv":  "^16.6.1",
+                         "express":  "^4.21.2"
+                     },
+    "devDependencies":  {
+                            "wrangler":  "^4.34.0"
+                        }
 }

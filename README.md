@@ -1,43 +1,88 @@
-# telegram-min-webhook
+﻿# telegram-min-webhook
 
-一个最小可用的 Telegram Bot Webhook 示例（Node.js + Express）。
+最小可用 Telegram Webhook 项目，支持两种运行方式：
 
-A minimal, production-friendly Telegram Bot webhook starter using Node.js + Express.
+1. **Cloudflare Worker（推荐）**
+2. **Node.js + Express（本地/传统服务器）**
+
+GitHub: https://github.com/Chenmo0414/telegram-min-webhook
 
 ---
 
-## 中文说明
+## 目录
 
-### 功能特性
-- 使用 Telegram Webhook 接收消息
-- 支持 `secret_token` 请求头校验
-- 默认仅处理私聊消息（`PRIVATE_ONLY=true`）
-- 快速返回 `200 OK`，异步处理消息，降低重试风险
-- 提供健康检查接口：`GET /health`
+- `worker.js`：Cloudflare Worker 版本（可直接 CF 拉取）
+- `wrangler.toml`：Worker 配置
+- `index.js`：Node.js + Express 版本
+- `.env.example`：本地环境变量示例
 
-### 项目结构
-- `index.js`：Webhook 服务主程序
-- `.env.example`：环境变量示例
-- `.gitignore`：忽略敏感文件（如 `.env`）
+---
 
-### 环境要求
+## A. Cloudflare Worker 部署（推荐）
+
+### 1) 前置
+- Cloudflare 账号
+- 域名已在 Cloudflare 托管（如 `chenmo.space`）
 - Node.js 18+
-- pnpm 10+
 
-### 安装与运行
+### 2) 安装与登录
 ```bash
 pnpm install
-cp .env.example .env
-pnpm start
+npx wrangler login
 ```
 
-Windows PowerShell 可用：
-```powershell
+### 3) 设置 Secrets
+```bash
+npx wrangler secret put BOT_TOKEN
+npx wrangler secret put WEBHOOK_SECRET
+```
+
+### 4) 部署
+```bash
+pnpm deploy
+```
+
+部署成功后得到 Worker 域名，或绑定自定义路由（例如）：
+
+- `tg.chenmo.space/telegram/webhook*`
+
+### 5) 设置 Telegram Webhook
+```bash
+curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
+  -d "url=https://tg.chenmo.space/telegram/webhook" \
+  -d "secret_token=<WEBHOOK_SECRET>" \
+  -d 'allowed_updates=["message","edited_message"]'
+```
+
+### 6) 检查状态
+```bash
+curl "https://api.telegram.org/bot<BOT_TOKEN>/getWebhookInfo"
+```
+
+---
+
+## B. Node.js + Express 本地运行
+
+```bash
+pnpm install
 copy .env.example .env
 pnpm start
 ```
 
-### 环境变量
+默认端点：
+- `POST /telegram/webhook`
+- `GET /health`
+
+---
+
+## 环境变量
+
+### Worker
+- `BOT_TOKEN`（secret）
+- `WEBHOOK_SECRET`（secret）
+- `PRIVATE_ONLY`（vars，默认 `true`）
+
+### Node.js
 ```env
 BOT_TOKEN=123456789:AAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 WEBHOOK_SECRET=replace_with_a_random_32_to_64_chars_secret
@@ -45,84 +90,17 @@ PORT=3000
 PRIVATE_ONLY=true
 ```
 
-> `BOT_TOKEN` 来自 `@BotFather`。  
-> `WEBHOOK_SECRET` 由你自己生成随机字符串，并在 `setWebhook` 时用同一个值传给 `secret_token`。
+---
 
-### 设置 Webhook
-将你的公网 HTTPS 地址替换为实际值（例如 Cloudflare Tunnel / ngrok）：
+## 脚本
 
 ```bash
-curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
-  -d "url=https://your-domain/telegram/webhook" \
-  -d "secret_token=<WEBHOOK_SECRET>" \
-  -d 'allowed_updates=["message","edited_message"]'
-```
-
-### 查看 Webhook 状态
-```bash
-curl "https://api.telegram.org/bot<BOT_TOKEN>/getWebhookInfo"
+pnpm start   # Node.js 版本
+pnpm dev     # Wrangler 本地调试
+pnpm deploy  # 部署 Cloudflare Worker
 ```
 
 ---
 
-## English
-
-### Features
-- Receives updates via Telegram Webhook
-- Optional `secret_token` header verification
-- Private chat only by default (`PRIVATE_ONLY=true`)
-- Fast `200 OK` response with async processing to reduce retries
-- Health check endpoint: `GET /health`
-
-### Structure
-- `index.js`: main webhook server
-- `.env.example`: environment template
-- `.gitignore`: excludes sensitive files like `.env`
-
-### Requirements
-- Node.js 18+
-- pnpm 10+
-
-### Install & Run
-```bash
-pnpm install
-cp .env.example .env
-pnpm start
-```
-
-### Environment Variables
-```env
-BOT_TOKEN=123456789:AAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-WEBHOOK_SECRET=replace_with_a_random_32_to_64_chars_secret
-PORT=3000
-PRIVATE_ONLY=true
-```
-
-> `BOT_TOKEN` is issued by `@BotFather`.  
-> `WEBHOOK_SECRET` is self-generated and must match `secret_token` in `setWebhook`.
-
-### Set Webhook
-Replace with your real HTTPS endpoint (Cloudflare Tunnel / ngrok):
-
-```bash
-curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook" \
-  -d "url=https://your-domain/telegram/webhook" \
-  -d "secret_token=<WEBHOOK_SECRET>" \
-  -d 'allowed_updates=["message","edited_message"]'
-```
-
-### Check Webhook Status
-```bash
-curl "https://api.telegram.org/bot<BOT_TOKEN>/getWebhookInfo"
-```
-
----
-
-## Author / 作者
-- **Chenmo**
-
-## License / 开源协议
-- **MIT License**
-- See [LICENSE](./LICENSE)
-
----
+## License
+MIT
